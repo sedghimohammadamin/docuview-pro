@@ -4,16 +4,16 @@ import builtins from "builtin-modules";
 import { copyFileSync } from "fs";
 
 const DESTINATIONS = [
-	"/Users/amin/Documents/Obsidian Vaults/Lesson/OSL/.obsidian/plugins/book-view",
-	"/Users/amin/Documents/Obsidian Vaults/Lesson/Other/.obsidian/plugins/book-view",
-	"/Users/amin/Documents/Obsidian Vaults/Lesson/FQH1/.obsidian/plugins/book-view",
-	"/Users/amin/Documents/Obsidian Vaults/Lesson/FQH2/.obsidian/plugins/book-view",
+	"/Users/amin/Documents/Obsidian Vaults/Lesson/OSL/.obsidian/plugins/word-viewer",
+	"/Users/amin/Documents/Obsidian Vaults/Lesson/Other/.obsidian/plugins/word-viewer",
+	"/Users/amin/Documents/Obsidian Vaults/Lesson/FQH1/.obsidian/plugins/word-viewer",
+	"/Users/amin/Documents/Obsidian Vaults/Lesson/FQH2/.obsidian/plugins/word-viewer",
 ];
 
 const prod = process.argv[2] === "production";
 
 await esbuild.build({
-	banner: { js: "/* Book View */" },
+	banner: { js: "/* Word Viewer */" },
 	entryPoints: ["src/main.ts"],
 	bundle: true,
 	external: [
