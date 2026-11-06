@@ -7,6 +7,10 @@ import { BookViewSettings, DEFAULT_SETTINGS } from "./settings";
 import { CommentManager } from "./comments";
 import { parseBook, parsePersianNumber, toPersianDigits, PageWithLines } from "./parser";
 
+interface BvWrapper extends HTMLElement {
+	__bvObserver?: IntersectionObserver;
+}
+
 export default class BookViewPlugin extends Plugin {
 	settings: BookViewSettings = DEFAULT_SETTINGS;
 	private timer: number | null = null;
@@ -33,7 +37,7 @@ export default class BookViewPlugin extends Plugin {
 			if (this.timer !== null) window.clearTimeout(this.timer);
 			this.timer = window.setTimeout(() => {
 				this.timer = null;
-				this.handleActive();
+				void void this.handleActive();
 			}, 200);
 		};
 
@@ -43,7 +47,8 @@ export default class BookViewPlugin extends Plugin {
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		const data = (await this.loadData()) as Partial<BookViewSettings> | null;
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, data ?? {});
 	}
 
 	async saveSettings() {
@@ -56,7 +61,7 @@ export default class BookViewPlugin extends Plugin {
 			if (!(view instanceof MarkdownView)) return;
 			this.cleanupView(view);
 		});
-		this.handleActive();
+		void this.handleActive();
 	}
 
 	/**
@@ -134,30 +139,30 @@ export default class BookViewPlugin extends Plugin {
 	private promptSelection(title: string, options: string[]): Promise<number | null> {
 		return new Promise((resolve) => {
 			const overlay = document.createElement("div");
-			overlay.style.cssText = "position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:100000;display:flex;align-items:center;justify-content:center;direction:rtl;";
+			overlay.addClass("bv-modal-overlay");
 			
 			const modal = document.createElement("div");
-			modal.style.cssText = "background:var(--background-primary);border-radius:12px;padding:20px;min-width:400px;max-width:600px;max-height:70vh;overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,0.4);";
+			modal.addClass("bv-modal-box"); modal.addClass("bv-modal-box-wide");
 			
 			const header = document.createElement("h3");
 			header.textContent = title;
-			header.style.cssText = "margin:0 0 16px 0;color:var(--text-normal);";
+			header.addClass("bv-modal-title");
 			modal.appendChild(header);
 			
 			const list = document.createElement("div");
-			list.style.cssText = "display:flex;flex-direction:column;gap:6px;";
+			list.addClass("bv-modal-list");
 			
 			options.forEach((opt, i) => {
 				const btn = document.createElement("button");
 				btn.textContent = opt;
-				btn.style.cssText = "padding:10px 14px;text-align:right;background:var(--background-secondary);border:1px solid var(--background-modifier-border);border-radius:8px;cursor:pointer;color:var(--text-normal);font-family:inherit;font-size:14px;transition:all 0.15s;";
+				btn.addClass("bv-modal-btn");
 				btn.addEventListener("mouseenter", () => {
-					btn.style.background = "var(--background-modifier-hover)";
-					btn.style.borderColor = "var(--interactive-accent)";
+					btn.setCssProps({ "background": "var(--background-modifier-hover)" });
+					btn.setCssProps({ "borderColor": "var(--interactive-accent)" });
 				});
 				btn.addEventListener("mouseleave", () => {
-					btn.style.background = "var(--background-secondary)";
-					btn.style.borderColor = "var(--background-modifier-border)";
+					btn.setCssProps({ "background": "var(--background-secondary)" });
+					btn.setCssProps({ "borderColor": "var(--background-modifier-border)" });
 				});
 				btn.addEventListener("click", () => {
 					overlay.remove();
@@ -185,32 +190,32 @@ export default class BookViewPlugin extends Plugin {
 	private promptTextSelection(title: string, text: string, footnotes: any[]): Promise<string | null> {
 		return new Promise((resolve) => {
 			const overlay = document.createElement("div");
-			overlay.style.cssText = "position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:100000;display:flex;align-items:center;justify-content:center;direction:rtl;";
+			overlay.addClass("bv-modal-overlay");
 			
 			const modal = document.createElement("div");
-			modal.style.cssText = "background:var(--background-primary);border-radius:12px;padding:20px;min-width:500px;max-width:700px;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(0,0,0,0.4);";
+			modal.addClass("bv-modal-box"); modal.addClass("bv-modal-box-narrow");
 			
 			const header = document.createElement("h3");
 			header.textContent = title;
-			header.style.cssText = "margin:0 0 8px 0;color:var(--text-normal);";
+			header.addClass("bv-modal-title-sm");
 			modal.appendChild(header);
 			
 			const hint = document.createElement("p");
 			hint.textContent = "متن مورد نظر را انتخاب کنید:";
-			hint.style.cssText = "margin:0 0 12px 0;color:var(--text-muted);font-size:0.9em;";
+			hint.addClass("bv-modal-hint");
 			modal.appendChild(hint);
 			
 			const content = document.createElement("div");
-			content.style.cssText = "flex:1;overflow:auto;padding:12px;background:var(--background-secondary);border-radius:8px;font-family:inherit;font-size:14px;line-height:1.8;direction:rtl;text-align:justify;white-space:pre-wrap;user-select:text;";
+			content.addClass("bv-modal-content");
 			content.textContent = text;
 			modal.appendChild(content);
 			
 			const actions = document.createElement("div");
-			actions.style.cssText = "display:flex;gap:8px;justify-content:flex-end;margin-top:16px;";
+			actions.addClass("bv-modal-actions");
 			
 			const cancelBtn = document.createElement("button");
 			cancelBtn.textContent = "✕ لغو";
-			cancelBtn.style.cssText = "padding:8px 16px;background:transparent;border:1px solid var(--background-modifier-border);border-radius:8px;cursor:pointer;color:var(--text-normal);font-family:inherit;";
+			cancelBtn.addClass("bv-modal-btn-cancel");
 			cancelBtn.addEventListener("click", () => {
 				overlay.remove();
 				resolve(null);
@@ -218,7 +223,7 @@ export default class BookViewPlugin extends Plugin {
 			
 			const confirmBtn = document.createElement("button");
 			confirmBtn.textContent = "✓ تأیید";
-			confirmBtn.style.cssText = "padding:8px 16px;background:var(--interactive-accent);border:none;border-radius:8px;cursor:pointer;color:var(--text-on-accent);font-weight:600;font-family:inherit;";
+			confirmBtn.addClass("bv-modal-btn-confirm");
 			confirmBtn.addEventListener("click", () => {
 				const sel = window.getSelection();
 				const selected = sel?.toString().trim();
@@ -268,7 +273,7 @@ export default class BookViewPlugin extends Plugin {
 			}
 		}
 
-		await this.app.fileManager.processFrontMatter(bookFile, (fmm: any) => {
+		await this.app.fileManager.processFrontMatter(bookFile, (fmm: Record<string, unknown>) => {
 			fmm["start-page-old"] = newStart;
 		});
 
@@ -313,7 +318,7 @@ export default class BookViewPlugin extends Plugin {
 						const content = callout.querySelector(".callout-content");
 						if (content) calloutText = (content.textContent || "").trim();
 					}
-					this.navigateToTarget(filePath, target, calloutText);
+					void this.navigateToTarget(filePath, target, calloutText);
 				}, true);
 			});
 		});
@@ -388,7 +393,6 @@ export default class BookViewPlugin extends Plugin {
 				const sizer = containerEl.querySelector(".markdown-preview-sizer");
 				// اگه root نیست، transform رو صدا بزن
 				if (!existingRoot && sizer) {
-					console.log("[BookView] forcing transform after split open");
 					await this.transform(freshView, file.path, containerEl);
 				}
 			}
@@ -411,8 +415,7 @@ export default class BookViewPlugin extends Plugin {
 			return false;
 		};
 		
-		const ready = await waitForRoot();
-		console.log("[BookView] root ready:", ready);
+		await waitForRoot();
 
 		const finalView = targetLeaf.view;
 		if (finalView instanceof MarkdownView) {
@@ -433,7 +436,7 @@ export default class BookViewPlugin extends Plugin {
 			attempts++;
 			const containerEl = view.previewMode?.containerEl;
 			if (!containerEl) { if (attempts < 30) setTimeout(tryScroll, 200); return; }
-			const cards = Array.from(containerEl.querySelectorAll(".book-view-page")) as HTMLElement[];
+			const cards = Array.from(containerEl.querySelectorAll<HTMLElement>(".book-view-page"));
 			if (cards.length === 0) { if (attempts < 30) setTimeout(tryScroll, 200); return; }
 			let target: HTMLElement | null = null;
 			for (const card of cards) {
@@ -459,7 +462,7 @@ export default class BookViewPlugin extends Plugin {
 			attempts++;
 			const containerEl = view.previewMode?.containerEl;
 			if (!containerEl) { if (attempts < maxAttempts) setTimeout(tryScroll, 150); return; }
-			const cards = Array.from(containerEl.querySelectorAll(".book-view-page")) as HTMLElement[];
+			const cards = Array.from(containerEl.querySelectorAll<HTMLElement>(".book-view-page"));
 			if (cards.length === 0) { if (attempts < maxAttempts) setTimeout(tryScroll, 150); return; }
 			
 			let targetCard: HTMLElement | null = null;
@@ -511,7 +514,7 @@ export default class BookViewPlugin extends Plugin {
 			.replace(/\[\s*[0-9۰-۹]+\s*\]/g, "")
 			// 🔑 حذف پاورقی‌های escaped: \(1\)
 			.replace(/\\\(\s*[0-9۰-۹]+\s*\\\)/g, "")
-			.replace(/[.،؛:؟!«»"'()\[\]{}\-ـ,;?!]/g, "")
+			.replace(/[.،؛:؟!«»"'()[]{}-ـ,;?!]/g, "")
 			.replace(/[\u064B-\u065F\u0670\u06D6-\u06DC\u06DF-\u06E4\u06E7\u06E8\u06EA-\u06ED]/g, "")
 			.replace(/\s+/g, "")
 			.replace(/[ةۀ]/g, "ه")
@@ -561,7 +564,6 @@ export default class BookViewPlugin extends Plugin {
 		}
 
 		const flatStr = flat.join("");
-		console.log("[Highlight] needle len:", needle.length, "| flatStr len:", flatStr.length);
 
 		let idx = flatStr.indexOf(needle);
 		let matchedLen = needle.length;
@@ -577,14 +579,12 @@ export default class BookViewPlugin extends Plugin {
 				if (j !== -1) {
 					idx = j;
 					matchedLen = partialNormalized.length;
-					console.log("[Highlight] matched", endWord, "/", words.length, "words");
 					break;
 				}
 			}
 		}
 
 		if (idx === -1) {
-			console.log("[Highlight] ✗ not found");
 			return null;
 		}
 
@@ -635,7 +635,6 @@ export default class BookViewPlugin extends Plugin {
 		}
 
 		if (spans.length === 0) return null;
-		console.log("[Highlight] ✓ created", spans.length, "spans");
 
 		setTimeout(() => {
 			spans.forEach((span) => {
@@ -651,16 +650,16 @@ export default class BookViewPlugin extends Plugin {
 
 	private scrollToText(text: string, view: MarkdownView) {
 		let attempts = 0;
-		const normalizeSimple = (s: string) => s.replace(/[\u200b-\u200f\u2028-\u202f\u2060\ufeff]/g, "").replace(/\u200c/g, "").replace(/[.،؛:؟!«»"'()\[\]{}\-_ـ,;?!]/g, "").replace(/\s+/g, "").replace(/[يى]/g, "ی").replace(/ك/g, "ک").toLowerCase().trim();
+		const normalizeSimple = (s: string) => s.replace(/[\u200b-\u200f\u2028-\u202f\u2060\ufeff]/g, "").replace(/\u200c/g, "").replace(/[.،؛:؟!«»"'()[]{}-_ـ,;?!]/g, "").replace(/\s+/g, "").replace(/[يى]/g, "ی").replace(/ك/g, "ک").toLowerCase().trim();
 		const needle = normalizeSimple(text);
 		if (!needle) return;
 		const tryScroll = () => {
 			attempts++;
 			const containerEl = view.previewMode?.containerEl;
 			if (!containerEl) { if (attempts < 30) setTimeout(tryScroll, 200); return; }
-			const cards = Array.from(containerEl.querySelectorAll(".book-view-page")) as HTMLElement[];
+			const cards = Array.from(containerEl.querySelectorAll<HTMLElement>(".book-view-page"));
 			if (cards.length === 0) { if (attempts < 30) setTimeout(tryScroll, 200); return; }
-			cards.forEach((c) => c.style.contentVisibility = "visible");
+			cards.forEach((c) => c.setCssProps({ "contentVisibility": "visible" }));
 			setTimeout(() => {
 				for (const card of cards) {
 					const cardText = card.textContent || "";
@@ -703,7 +702,7 @@ export default class BookViewPlugin extends Plugin {
 				setIcon(btn, "book-open");
 				btn.classList.remove("is-active");
 			} else {
-				this.handleActive();
+				void this.handleActive();
 				setIcon(btn, "book-open-check");
 				btn.classList.add("is-active");
 			}
@@ -711,10 +710,10 @@ export default class BookViewPlugin extends Plugin {
 	}
 
 	private destroyWrapper(wrapper: HTMLElement) {
-		const observer = (wrapper as any).__bvObserver as IntersectionObserver | undefined;
+		const observer = (wrapper as BvWrapper).__bvObserver;
 		if (observer) observer.disconnect();
 		const sizer = wrapper.parentElement?.querySelector(".markdown-preview-sizer") as HTMLElement | null;
-		if (sizer) sizer.style.display = "";
+		if (sizer) sizer.setCssProps({ "display": "" });
 		wrapper.remove();
 	}
 
@@ -764,7 +763,6 @@ export default class BookViewPlugin extends Plugin {
 			const pageCount = Math.max(1, (body.match(/^---\s*$/gm) || []).length - 1);
 			new Notice(`✅ ${path} (${pageCount} صفحه)`);
 		} catch (e: any) {
-			console.error(e);
 			new Notice("❌ خطا: " + (e?.message ?? "?"));
 		}
 	}
@@ -815,14 +813,14 @@ export default class BookViewPlugin extends Plugin {
 			editBtn.textContent = "✎";
 			editBtn.title = "ویرایش این صفحه";
 			editBtn.addEventListener("mouseenter", () => {
-				editBtn.style.opacity = "1";
-				editBtn.style.background = "var(--background-modifier-hover)";
-				editBtn.style.borderColor = "var(--interactive-accent)";
+				editBtn.setCssProps({ "opacity": "1" });
+				editBtn.setCssProps({ "background": "var(--background-modifier-hover)" });
+				editBtn.setCssProps({ "borderColor": "var(--interactive-accent)" });
 			});
 			editBtn.addEventListener("mouseleave", () => {
-				editBtn.style.opacity = "0.7";
-				editBtn.style.background = "transparent";
-				editBtn.style.borderColor = "var(--background-modifier-border)";
+				editBtn.setCssProps({ "opacity": "0.7" });
+				editBtn.setCssProps({ "background": "transparent" });
+				editBtn.setCssProps({ "borderColor": "var(--background-modifier-border)" });
 			});
 			editBtn.addEventListener("click", (e) => {
 				e.preventDefault(); e.stopPropagation();
@@ -852,7 +850,7 @@ export default class BookViewPlugin extends Plugin {
 
 		const sizer = containerEl.querySelector(".markdown-preview-sizer") as HTMLElement | null;
 		if (sizer) {
-			sizer.style.display = "none";
+			sizer.setCssProps({ "display": "none" });
 			sizer.parentElement!.insertBefore(wrapper, sizer);
 		}
 		this.processing = false;
@@ -867,7 +865,6 @@ export default class BookViewPlugin extends Plugin {
 		const pageRoot = article.closest?.(".book-view-root") as HTMLElement | null;
 		const theme = pageRoot?.dataset?.theme || this.settings.theme || "white";
 
-		console.log("[EditColors] theme:", theme);
 
 		switch (theme) {
 			case "white":
@@ -931,47 +928,47 @@ export default class BookViewPlugin extends Plugin {
 		textarea.value = originalText;
 		textarea.rows = Math.max(lineCount, 10);
 		textarea.setAttribute("dir", "rtl");
-		textarea.style.setProperty("background", colors.bg, "important");
-		textarea.style.setProperty("color", colors.text, "important");
-		textarea.style.setProperty("caret-color", colors.caret, "important");
-		textarea.style.setProperty("border", "none", "important");
-		textarea.style.setProperty("outline", "none", "important");
-		textarea.style.setProperty("box-shadow", "inset 0 0 0 2px " + colors.border, "important");
-		textarea.style.setProperty("border-radius", "6px", "important");
-		textarea.style.setProperty("padding", "12px", "important");
-		textarea.style.setProperty("margin", "0", "important");
-		textarea.style.setProperty("width", bodyWidth + "px", "important");
-		textarea.style.setProperty("min-height", bodyHeight + "px", "important");
-		textarea.style.setProperty("box-sizing", "border-box", "important");
-		textarea.style.setProperty("resize", "none", "important");
-		textarea.style.setProperty("overflow", "auto", "important");
-		textarea.style.setProperty("direction", "rtl", "important");
-		textarea.style.setProperty("font-size", "var(--bv-body-font-size, 16px)", "important");
-		textarea.style.setProperty("line-height", "var(--bv-body-line-height, 1.9)", "important");
-		textarea.style.setProperty("font-family", "var(--bv-body-font, inherit)", "important");
-		textarea.style.setProperty("text-align", "justify", "important");
-		textarea.style.setProperty("white-space", "pre-wrap", "important");
+		textarea.setCssProps({ "--bv-edit-bg": colors.bg });
+		textarea.setCssProps({ "--bv-edit-text": colors.text });
+		textarea.setCssProps({ "--bv-edit-caret": colors.caret });
+		
+		
+		textarea.setCssProps({ "--bv-edit-border": colors.border });
+		
+		
+		
+		textarea.setCssProps({ "width": bodyWidth + "px" });
+		textarea.setCssProps({ "minHeight": bodyHeight + "px" });
+		
+		
+		
+		
+		
+		
+		
+		
+		
 
 		const wrapper = document.createElement("div");
 		wrapper.className = "bv-live-edit-wrapper";
-		wrapper.style.setProperty("position", "relative", "important");
+		wrapper.addClass("bv-edit-wrapper");
 		wrapper.appendChild(textarea);
 
 		const buttons = document.createElement("div");
 		buttons.className = "bv-live-edit-buttons";
-		buttons.style.cssText = "position:absolute;top:-46px;left:0;display:flex;gap:6px;background:var(--background-primary);padding:4px 8px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.3);z-index:1000";
+		buttons.addClass("bv-edit-toolbar");
 
 		const saveBtn = document.createElement("button");
 		saveBtn.textContent = "✓";
 		saveBtn.type = "button";
 		saveBtn.title = "ذخیره (Cmd+Enter)";
-		saveBtn.style.cssText = "background:#22c55e;color:#fff;border:none;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:14px;font-weight:700";
+		saveBtn.addClass("bv-edit-save-btn");
 
 		const cancelBtn = document.createElement("button");
 		cancelBtn.textContent = "✕";
 		cancelBtn.type = "button";
 		cancelBtn.title = "لغو (Esc)";
-		cancelBtn.style.cssText = "background:#ef4444;color:#fff;border:none;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:14px;font-weight:700";
+		cancelBtn.addClass("bv-edit-cancel-btn");
 
 		buttons.appendChild(saveBtn);
 		buttons.appendChild(cancelBtn);
@@ -1017,7 +1014,6 @@ export default class BookViewPlugin extends Plugin {
 					}
 				}
 
-				console.log("[EditPage] startLine:", startLine, "currentActualEnd:", currentActualEnd, "page.endLine:", endLine);
 
 				// 🔑 فقط تا currentActualEnd رو جایگزین کن (نه endLine)
 				const before = currentLines.slice(0, startLine);
@@ -1026,7 +1022,6 @@ export default class BookViewPlugin extends Plugin {
 				const newContent = [...before, ...newLines, ...after].join("\n");
 
 				await this.app.vault.modify(file, newContent);
-				console.log("[EditPage] ✓ SAVED");
 
 				// آپدیت page.endLine
 				const delta = newLines.length - (currentActualEnd - startLine);
@@ -1058,7 +1053,6 @@ export default class BookViewPlugin extends Plugin {
 				await this.reattach(body, sourcePath);
 				new Notice("✅ ذخیره شد");
 			} catch (e) {
-				console.error("[EditPage] ERROR:", e);
 				new Notice("❌ خطا: " + (e as Error).message);
 			}
 		};
@@ -1123,7 +1117,7 @@ export default class BookViewPlugin extends Plugin {
 			const body = article.querySelector(".book-view-page-body") as HTMLElement;
 			if (!body) return;
 
-			body.innerHTML = "";
+			body.empty();
 			this.currentSourcePath = sourcePath;
 			const md = this.injectFootnoteSyntax(page.markdown, page.footnotes);
 			await MarkdownRenderer.render(this.app, md, body, sourcePath, this);
@@ -1151,7 +1145,7 @@ export default class BookViewPlugin extends Plugin {
 		wrapper.querySelectorAll(".book-view-page").forEach((el) => observer.observe(el));
 		const all = wrapper.querySelectorAll(".book-view-page");
 		for (let i = 0; i < Math.min(3, all.length); i++) enqueue(all[i] as HTMLElement);
-		(wrapper as any).__bvObserver = observer;
+		(wrapper as BvWrapper).__bvObserver = observer;
 	}
 
 	private injectFootnoteSyntax(markdown: string, footnotes: { num: string; text: string }[]): string {
@@ -1212,9 +1206,9 @@ export default class BookViewPlugin extends Plugin {
 			const editBtn = document.createElement("button");
 			editBtn.textContent = "✎";
 			editBtn.title = "ویرایش این پاورقی";
-			editBtn.style.cssText = "background:transparent;border:none;cursor:pointer;color:var(--text-muted);font-size:13px;padding:0 4px;margin-right:4px;opacity:0.4;transition:opacity 0.2s";
-			editBtn.addEventListener("mouseenter", () => editBtn.style.opacity = "1");
-			editBtn.addEventListener("mouseleave", () => editBtn.style.opacity = "0.4");
+			editBtn.addClass("bv-fn-edit-btn");
+			editBtn.addEventListener("mouseenter", () => editBtn.setCssProps({ "opacity": "1" }));
+			editBtn.addEventListener("mouseleave", () => editBtn.setCssProps({ "opacity": "0.4" }));
 			editBtn.onclick = (e) => {
 				e.preventDefault();
 				e.stopPropagation();
@@ -1257,7 +1251,7 @@ export default class BookViewPlugin extends Plugin {
 		const num = page.footnotes[index]?.num || String(index + 1);
 
 		const originalHTML = contentEl.innerHTML;
-		contentEl.innerHTML = "";
+		contentEl.empty();
 
 		// 🔑 استایل از خود محتوا (body) بگیر، نه از span.p
 		const bodyEl = article.querySelector(".book-view-page-body") as HTMLElement;
@@ -1267,39 +1261,38 @@ export default class BookViewPlugin extends Plugin {
 		const bodyFontFamily = computed.fontFamily || "inherit";
 		const bodyColor = computed.color || "#1a1a1a";
 
-		console.log("[FnEdit] num:", num, "| text:", JSON.stringify(originalText.slice(0, 50)), "| fs:", bodyFontSize);
 
 		const ta = document.createElement("textarea");
 		ta.value = originalText;
 		ta.className = "bv-fn-edit";
 		ta.setAttribute("dir", "rtl");
-		ta.style.setProperty("width", "100%", "important");
-		ta.style.setProperty("min-height", "60px", "important");
-		ta.style.setProperty("padding", "0", "important");
-		ta.style.setProperty("border", "none", "important");
-		ta.style.setProperty("outline", "none", "important");
-		ta.style.setProperty("box-shadow", "none", "important");
+		ta.setCssProps({ "width": "100%" });
+		ta.setCssProps({ "minHeight": "60px" });
+		ta.setCssProps({ "padding": "0" });
+		ta.setCssProps({ "border": "none" });
+		ta.setCssProps({ "outline": "none" });
+		ta.setCssProps({ "boxShadow": "none" });
 		const colors = this.getEditColors(article);
-		ta.style.setProperty("background", colors.bg, "important");
-		ta.style.setProperty("color", colors.text, "important");
-		ta.style.setProperty("caret-color", colors.caret, "important");
-		ta.style.setProperty("box-shadow", "inset 0 0 0 2px " + colors.border, "important");
-		ta.style.setProperty("border-radius", "4px", "important");
-		ta.style.setProperty("padding", "6px 8px", "important");
-		ta.style.setProperty("font-family", bodyFontFamily, "important");
-		ta.style.setProperty("font-size", bodyFontSize, "important");
-		ta.style.setProperty("line-height", bodyLineHeight, "important");
-		ta.style.setProperty("resize", "none", "important");
-		ta.style.setProperty("box-sizing", "border-box", "important");
-		ta.style.setProperty("direction", "rtl", "important");
-		ta.style.setProperty("text-align", "justify", "important");
+		ta.setCssProps({ "background": colors.bg });
+		ta.setCssProps({ "color": colors.text });
+		ta.setCssProps({ "caretColor": colors.caret });
+		ta.setCssProps({ "boxShadow": "inset 0 0 0 2px " + colors.border });
+		ta.setCssProps({ "borderRadius": "4px" });
+		ta.setCssProps({ "padding": "6px 8px" });
+		ta.setCssProps({ "fontFamily": bodyFontFamily });
+		ta.setCssProps({ "fontSize": bodyFontSize });
+		ta.setCssProps({ "lineHeight": bodyLineHeight });
+		ta.setCssProps({ "resize": "none" });
+		ta.setCssProps({ "boxSizing": "border-box" });
+		ta.setCssProps({ "direction": "rtl" });
+		ta.setCssProps({ "textAlign": "justify" });
 		contentEl.appendChild(ta);
 		ta.focus();
 		ta.setSelectionRange(ta.value.length, ta.value.length);
 
 		const autoResize = () => {
-			ta.style.setProperty("height", "auto", "important");
-			ta.style.setProperty("height", ta.scrollHeight + "px", "important");
+			ta.setCssProps({ "height": "auto" });
+			ta.setCssProps({ "height": ta.scrollHeight + "px" });
 		};
 		autoResize();
 		ta.addEventListener("input", autoResize);
@@ -1344,7 +1337,7 @@ export default class BookViewPlugin extends Plugin {
 			const newContent = [...beforeLines, ...newFnLines, ...afterLines].join("\n");
 			await this.app.vault.modify(file, newContent);
 
-			contentEl.innerHTML = "";
+			contentEl.empty();
 			const clone = document.createElement("span");
 			clone.textContent = newText;
 			contentEl.appendChild(clone);
@@ -1455,18 +1448,18 @@ export default class BookViewPlugin extends Plugin {
 		
 		const root = article.closest(".book-view-root") as HTMLElement;
 		const theme = root?.dataset?.theme || "white";
-		if (theme === "black") box.style.background = "#262626";
-		else if (theme === "cream") box.style.background = "#ece0c6";
-		else if (theme === "milky") box.style.background = "#f2f0ea";
-		else box.style.background = "#f7f7f7";
+		if (theme === "black") box.setCssProps({ "background": "#262626" });
+		else if (theme === "cream") box.setCssProps({ "background": "#ece0c6" });
+		else if (theme === "milky") box.setCssProps({ "background": "#f2f0ea" });
+		else box.setCssProps({ "background": "#f7f7f7" });
 		
 		const title = document.createElement("div");
 		title.textContent = `🔗 لینک‌های ورودی (${backlinks.length})`;
-		title.style.cssText = "font-weight:700;margin-bottom:12px;font-size:1em;";
+		title.addClass("bv-backlinks-title");
 		box.appendChild(title);
 		
 		const list = document.createElement("div");
-		list.style.cssText = "display:flex;flex-direction:column;";
+		list.addClass("bv-backlinks-list");
 		
 		backlinks.forEach((bl, idx) => {
 			const item = document.createElement("div");
@@ -1485,7 +1478,7 @@ export default class BookViewPlugin extends Plugin {
 			link.className = "internal-link";
 			link.dataset.href = bl.file.path;
 			link.href = "#";
-			link.style.cssText = "color:var(--text-accent);cursor:pointer;text-decoration:none;font-size:1em;word-break:break-all;";
+			link.addClass("bv-backlinks-link");
 			link.addEventListener("click", (e) => {
 				e.preventDefault();
 				e.stopPropagation();
@@ -1495,7 +1488,7 @@ export default class BookViewPlugin extends Plugin {
 			
 			// تعداد خط
 			const meta = document.createElement("div");
-			meta.style.cssText = "color:var(--text-muted);font-size:0.85em;";
+			meta.addClass("bv-backlinks-meta");
 			const lineCount = (bl.label || "").split("\n").length;
 			if (bl.anchor) {
 				meta.textContent = `صفحه ${bl.anchor}`;
@@ -1557,23 +1550,23 @@ export default class BookViewPlugin extends Plugin {
 		const s = this.settings;
 		const bodyFont = s.bodyFont === "inherit" ? "var(--font-text, inherit)" : s.bodyFont;
 		const headerFont = s.headerFont === "inherit" ? bodyFont : s.headerFont;
-		root.style.setProperty("--bv-page-max-width", s.pageMaxWidth + "px");
-		root.style.setProperty("--bv-page-min-height", s.pageMinHeight + "px");
-		root.style.setProperty("--bv-page-padding", s.pagePadding + "px");
-		root.style.setProperty("--bv-page-gap", s.pageGap + "px");
-		root.style.setProperty("--bv-border-radius", s.borderRadius + "px");
-		root.style.setProperty("--bv-body-font", bodyFont);
-		root.style.setProperty("--bv-body-font-size", s.bodyFontSize + "px");
-		root.style.setProperty("--bv-body-line-height", String(s.bodyLineHeight));
-		root.style.setProperty("--bv-body-para-spacing", s.bodyParagraphSpacing + "em");
-		root.style.setProperty("--bv-body-text-align", s.bodyTextAlign);
-		root.style.setProperty("--bv-header-font", headerFont);
-		root.style.setProperty("--bv-header-font-size", s.headerFontSize + "px");
-		if (s.footnoteTextColor) root.style.setProperty("--bv-fn-text-color", s.footnoteTextColor);
+		root.setCssProps({ "--bv-page-max-width": s.pageMaxWidth + "px" });
+		root.setCssProps({ "--bv-page-min-height": s.pageMinHeight + "px" });
+		root.setCssProps({ "--bv-page-padding": s.pagePadding + "px" });
+		root.setCssProps({ "--bv-page-gap": s.pageGap + "px" });
+		root.setCssProps({ "--bv-border-radius": s.borderRadius + "px" });
+		root.setCssProps({ "--bv-body-font": bodyFont });
+		root.setCssProps({ "--bv-body-font-size": s.bodyFontSize + "px" });
+		root.setCssProps({ "--bv-body-line-height": String(s.bodyLineHeight) });
+		root.setCssProps({ "--bv-body-para-spacing": s.bodyParagraphSpacing + "em" });
+		root.setCssProps({ "--bv-body-text-align": s.bodyTextAlign });
+		root.setCssProps({ "--bv-header-font": headerFont });
+		root.setCssProps({ "--bv-header-font-size": s.headerFontSize + "px" });
+		if (s.footnoteTextColor) root.setCssProps({ "-BvFnTextColor": s.footnoteTextColor });
 		else root.style.removeProperty("--bv-fn-text-color");
-		if (s.footnoteHighlightColor) root.style.setProperty("--bv-fn-highlight-color", s.footnoteHighlightColor);
+		if (s.footnoteHighlightColor) root.setCssProps({ "-BvFnHighlightColor": s.footnoteHighlightColor });
 		else root.style.removeProperty("--bv-fn-highlight-color");
-		if (s.footnoteHighlightTextColor) root.style.setProperty("--bv-fn-highlight-text", s.footnoteHighlightTextColor);
+		if (s.footnoteHighlightTextColor) root.setCssProps({ "-BvFnHighlightText": s.footnoteHighlightTextColor });
 		else root.style.removeProperty("--bv-fn-highlight-text");
 		root.setAttribute("data-theme", s.theme);
 		root.setAttribute("data-shadow", String(s.shadowLevel));

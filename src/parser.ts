@@ -17,7 +17,7 @@ export function normalizeForSearch(s: string): string {
 	return s
 		.replace(/[\u200b-\u200f\u2028-\u202f\u2060\ufeff]/g, "")
 		.replace(/\u200c/g, "")
-		.replace(/[.،؛:؟!«»"'()\[\]{}\-_ـ,;?!]/g, "")
+		.replace(/[.،؛:؟!«»"'()\-_ـ,;?!]/g, "")
 		.replace(/\s+/g, "")
 		.replace(/[يى]/g, "ی")
 		.replace(/ك/g, "ک")
@@ -31,7 +31,7 @@ export function normalizeForSearch(s: string): string {
 export function normalizeChar(ch: string): string | null {
 	if (/[\u200b-\u200f\u2028-\u202f\u2060\ufeff]/.test(ch)) return null;
 	if (ch === "\u200c") return null;
-	if (/[.،؛:؟!«»"'()\[\]{}\-_ـ,;?!]/.test(ch)) return null;
+	if (/[.،؛:؟!«»"'()\-_ـ,;?!]/.test(ch)) return null;
 	if (/\s/.test(ch)) return null;
 	if (ch === "ي" || ch === "ى") return "ی";
 	if (ch === "ك") return "ک";
@@ -60,13 +60,15 @@ export interface PageWithLines {
 	paragraphLines: LineRange[];
 }
 
+type FrontmatterGetter = (path: string) => unknown;
+
 /**
  * markdown خام رو به صفحه‌ها با اطلاعات خط تقسیم می‌کنه.
  */
 export function parseBook(
 	raw: string,
 	sourcePath: string,
-	getFrontmatter: (path: string) => any,
+	getFrontmatter: FrontmatterGetter,
 	startPageFallback: number = 1
 ): PageWithLines[] {
 	let content = raw;
@@ -81,10 +83,13 @@ export function parseBook(
 
 	// start-page
 	let startPage = startPageFallback;
-	const cache = getFrontmatter(sourcePath);
-	if (cache?.["start-page"] !== undefined) {
-		const sp = parseInt(String(cache["start-page"]), 10);
-		if (!isNaN(sp) && sp >= 0) startPage = sp;
+	const cache = getFrontmatter(sourcePath) as Record<string, unknown> | undefined;
+	const startPageRaw = cache?.["start-page"];
+	if (startPageRaw !== undefined && startPageRaw !== null) {
+		if (typeof startPageRaw === "string" || typeof startPageRaw === "number") {
+			const sp = parseInt(String(startPageRaw), 10);
+			if (!isNaN(sp) && sp >= 0) startPage = sp;
+		}
 	}
 
 	const lines = content.split(/\r?\n/);
@@ -133,7 +138,6 @@ export function parseBook(
 		// H1 = مرز درس
 		const h1Match = text.match(/^#\s+(.+)$/m);
 		let restText = text;
-		let lessonStartLine = chunkStart;
 		let lessonLineCount = 0;
 
 		if (h1Match) {
@@ -142,7 +146,6 @@ export function parseBook(
 				(l) => l.trim().startsWith("# ")
 			);
 			if (h1Index >= 0) {
-				lessonStartLine = chunkStart + h1Index;
 				lessonLineCount = 1;
 			}
 			restText = text.replace(/^#\s+.+$/m, "").trim();

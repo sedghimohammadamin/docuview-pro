@@ -11,6 +11,11 @@ interface ParsedComment {
 	paraHash: string;
 }
 
+interface BvElement extends HTMLElement {
+	__bvHasHover?: boolean;
+	__bvHasSelectionHandler?: boolean;
+}
+
 export class CommentManager {
 	private app: App;
 	private popover: HTMLElement | null = null;
@@ -18,8 +23,8 @@ export class CommentManager {
 	private globalHandler: ((e: MouseEvent) => void) | null = null;
 	private tooltip: HTMLElement | null = null;
 	private lastSelectedPara: HTMLElement | null = null;
-	private lastSelectedOccurrence: number = 0;
-	private lastSelectedParaHash: string = "";
+	private lastSelectedOccurrence = 0;
+	private lastSelectedParaHash = "";
 
 	constructor(app: App) {
 		this.app = app;
@@ -51,12 +56,7 @@ export class CommentManager {
 			if (body.querySelector(`.bv-comment-mark[data-comment-id="${c.id}"]`)) continue;
 			const needle = this.normalize(c.text);
 			if (!needle) continue;
-			const wrapped = this.wrapInBody(body, c.id, needle, c.color, c.occurrence, c.paraHash);
-			if (wrapped) {
-				console.log("[Comment] ✓ wrapped:", c.id);
-			} else {
-				console.log("[Comment] ✗ FAILED:", c.id);
-			}
+			this.wrapInBody(body, c.id, needle, c.color, c.occurrence, c.paraHash);
 		}
 
 		this.enableEvents(body, sourcePath, onUpdate);
@@ -80,7 +80,7 @@ export class CommentManager {
 			const fieldMatch = line.match(/^\s{4}(text|note|color|occurrence|paraHash):\s*(.*)$/);
 			if (fieldMatch && current) {
 				const key = fieldMatch[1];
-				let val = fieldMatch[2].trim().replace(/^["']|["']$/g, "").replace(/\\"/g, '"');
+				const val = fieldMatch[2].trim().replace(/^["']|["']$/g, "").replace(/\\"/g, '"');
 				if (key === "occurrence") current.occurrence = parseInt(val, 10) || 0;
 				else if (key === "color" && val) current.color = val;
 				else if (key === "text") current.text = val;
@@ -171,13 +171,7 @@ export class CommentManager {
 		const applyStyles = (span: HTMLElement) => {
 			span.className = "bv-comment-mark";
 			span.dataset.commentId = commentId;
-			span.style.setProperty("background-color", this.hexToRgba(safeColor, 0.35), "important");
-			span.style.setProperty("border-radius", "4px", "important");
-			span.style.setProperty("padding", "1px 3px", "important");
-			span.style.setProperty("cursor", "pointer", "important");
-			span.style.setProperty("text-decoration", "none", "important");
-			span.style.setProperty("box-decoration-break", "clone", "important");
-			span.style.setProperty("-webkit-box-decoration-break", "clone", "important");
+			span.setCssProps({ "--bv-comment-bg": this.hexToRgba(safeColor, 0.35) });
 		};
 
 		const involvedNodes: { node: Text; startFlat: number; endFlat: number }[] = [];
@@ -218,7 +212,7 @@ export class CommentManager {
 			const parentNode = t.parentNode;
 			if (!parentNode) continue;
 
-			const frag = document.createDocumentFragment();
+			const frag = createFragment();
 			if (before) frag.appendChild(document.createTextNode(before));
 
 			const span = document.createElement("span");
@@ -234,9 +228,9 @@ export class CommentManager {
 
 	private enableEvents(container: HTMLElement, sourcePath: string, onUpdate: () => void) {
 		container.querySelectorAll(".bv-comment-mark").forEach((mark) => {
-			const el = mark as HTMLElement;
-			if ((el as any).__bvHasHover) return;
-			(el as any).__bvHasHover = true;
+			const el = mark as BvElement;
+			if (el.__bvHasHover) return;
+			el.__bvHasHover = true;
 
 			el.addEventListener("click", (e) => {
 				e.preventDefault();
@@ -246,17 +240,18 @@ export class CommentManager {
 
 			el.addEventListener("mouseenter", (e) => {
 				e.stopPropagation();
-				this.showTooltip(el, sourcePath);
+				void this.showTooltip(el, sourcePath);
 			});
 			el.addEventListener("mouseleave", () => {
 				this.hideTooltip();
 			});
 		});
 
-		if (!(container as any).__bvHasSelectionHandler) {
-			(container as any).__bvHasSelectionHandler = true;
+		const containerEl = container as BvElement;
+		if (!containerEl.__bvHasSelectionHandler) {
+			containerEl.__bvHasSelectionHandler = true;
 			container.addEventListener("mouseup", () => {
-				setTimeout(() => this.handleSelection(container, sourcePath, onUpdate), 10);
+				window.setTimeout(() => this.handleSelection(container, sourcePath, onUpdate), 10);
 			});
 		}
 	}
@@ -286,26 +281,13 @@ export class CommentManager {
 		const tooltip = document.createElement("div");
 		tooltip.className = "bv-comment-tooltip";
 		tooltip.textContent = commentText;
-		tooltip.style.cssText = `
-			position: fixed;
-			background: #1e1e1e;
-			color: #ffffff;
-			border-radius: 8px;
-			padding: 8px 12px;
-			font-size: 13px;
-			max-width: 320px;
-			box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-			border-left: 3px solid ${color};
-			z-index: 10002;
-			direction: rtl;
-			pointer-events: none;
-			line-height: 1.6;
-			white-space: pre-wrap;
-		`;
+		tooltip.setCssProps({ "--bv-tooltip-border": color });
 
 		const rect = mark.getBoundingClientRect();
-		tooltip.style.left = `${Math.max(10, rect.left)}px`;
-		tooltip.style.top = `${rect.bottom + 8}px`;
+		tooltip.setCssProps({
+			"--bv-tooltip-left": `${Math.max(10, rect.left)}px`,
+			"--bv-tooltip-top": `${rect.bottom + 8}px`,
+		});
 
 		document.body.appendChild(tooltip);
 		this.tooltip = tooltip;
@@ -326,8 +308,10 @@ export class CommentManager {
 			this.closePopover();
 			this.removeFloatingBtn();
 		};
-		setTimeout(() => {
-			document.addEventListener("mousedown", this.globalHandler!, true);
+		window.setTimeout(() => {
+			if (this.globalHandler) {
+				document.addEventListener("mousedown", this.globalHandler, true);
+			}
 		}, 100);
 	}
 
@@ -362,14 +346,14 @@ export class CommentManager {
 		if (!text) { this.removeFloatingBtn(); return; }
 
 		const body = (commonEl.nodeType === Node.TEXT_NODE
-			? (commonEl.parentElement as HTMLElement)
+			? (commonEl.parentElement)
 			: commonEl
 		)?.closest(".book-view-page-body") as HTMLElement | null;
 
 		if (!body) { this.removeFloatingBtn(); return; }
 
 		const para = (commonEl.nodeType === Node.TEXT_NODE
-			? (commonEl.parentElement as HTMLElement)
+			? (commonEl.parentElement)
 			: commonEl
 		)?.closest("p, li, h1, h2, h3, h4, h5, h6") as HTMLElement | null;
 
@@ -410,8 +394,8 @@ export class CommentManager {
 					start = j + 1;
 				}
 				this.lastSelectedOccurrence = occCount;
-			} catch (e) {
-				console.warn("[Comment] occurrence detect failed:", e);
+			} catch {
+				// ignore
 			}
 		}
 
@@ -424,21 +408,10 @@ export class CommentManager {
 		const btn = document.createElement("button");
 		btn.className = "bv-comment-floating-btn";
 		btn.textContent = "💬 افزودن کامنت";
-		btn.style.cssText = `
-			position: fixed;
-			left: ${rect.left + rect.width / 2 - 80}px;
-			top: ${rect.top - 50}px;
-			z-index: 10000;
-			background: #7c3aed;
-			color: #ffffff;
-			border: none;
-			border-radius: 20px;
-			padding: 8px 16px;
-			cursor: pointer;
-			font-size: 13px;
-			font-weight: 600;
-			box-shadow: 0 4px 12px rgba(124,58,237,0.4);
-		`;
+		btn.setCssProps({
+			"--bv-fbtn-left": `${rect.left + rect.width / 2 - 80}px`,
+			"--bv-fbtn-top": `${rect.top - 50}px`,
+		});
 		btn.addEventListener("mousedown", (e) => { e.preventDefault(); e.stopPropagation(); });
 		btn.addEventListener("click", (e) => {
 			e.preventDefault();
@@ -461,46 +434,31 @@ export class CommentManager {
 		this.closePopover();
 		const popover = document.createElement("div");
 		popover.className = "bv-comment-popover";
-		popover.style.cssText = `
-			position: fixed;
-			left: ${Math.max(10, Math.min(rect.left, window.innerWidth - 400))}px;
-			top: ${Math.min(rect.bottom + 10, window.innerHeight - 400)}px;
-			z-index: 10001;
-			background: #1e1e1e;
-			color: #ffffff;
-			border: 1px solid #444;
-			border-radius: 12px;
-			padding: 14px;
-			box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-			min-width: 340px;
-			max-width: 400px;
-			direction: rtl;
-		`;
+		popover.setCssProps({
+			"--bv-popover-left": `${Math.max(10, Math.min(rect.left, window.innerWidth - 400))}px`,
+			"--bv-popover-top": `${Math.min(rect.bottom + 10, window.innerHeight - 400)}px`,
+		});
 
 		let selectedColor = "#fbbf24";
 
 		const colorPalette = ["#fbbf24", "#f472b6", "#a78bfa", "#60a5fa", "#34d399", "#f87171", "#fb923c", "#22d3ee"];
 		const colorRow = document.createElement("div");
-		colorRow.style.cssText = "display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;";
+		colorRow.className = "bv-color-row";
 		colorRow.appendChild(document.createTextNode("🎨 "));
 
 		const swatches: HTMLElement[] = [];
 		const updateSwatchStyles = () => {
 			swatches.forEach((sw, idx) => {
 				const isActive = colorPalette[idx] === selectedColor;
-				sw.style.transform = isActive ? "scale(1.2)" : "scale(1)";
-				sw.style.borderColor = isActive ? "#fff" : "transparent";
+				sw.toggleClass("is-active", isActive);
 			});
 		};
 
 		colorPalette.forEach((color) => {
 			const sw = document.createElement("button");
 			sw.type = "button";
-			sw.style.cssText = `
-				width: 26px; height: 26px; border-radius: 50%;
-				background: ${color}; border: 3px solid transparent;
-				cursor: pointer; padding: 0; transition: all 0.15s;
-			`;
+			sw.className = "bv-color-swatch";
+			sw.setCssProps({ "--bv-swatch-color": color });
 			sw.addEventListener("click", (e) => {
 				e.preventDefault(); e.stopPropagation();
 				selectedColor = color; updateSwatchStyles();
@@ -512,45 +470,43 @@ export class CommentManager {
 		popover.appendChild(colorRow);
 
 		const preview = document.createElement("div");
-		preview.style.cssText = `
-			padding: 8px 12px; background: rgba(0,0,0,0.3); border-radius: 8px;
-			margin-bottom: 10px; font-size: 12px; color: #ccc; max-height: 80px;
-			overflow: auto; border-right: 3px solid ${selectedColor};
-		`;
+		preview.className = "bv-comment-preview";
+		preview.setCssProps({ "--bv-preview-border": selectedColor });
 		const updatePreview = () => {
 			preview.textContent = `«${selectedText}»`;
-			preview.style.borderRightColor = selectedColor;
+			preview.setCssProps({ "--bv-preview-border": selectedColor });
 		};
 		updatePreview();
 		popover.appendChild(preview);
 
 		const ta = document.createElement("textarea");
+		ta.className = "bv-comment-input";
 		ta.placeholder = "متن کامنت...";
 		ta.rows = 3;
 		ta.setAttribute("dir", "rtl");
-		ta.style.cssText = "width:100%;padding:10px;border:1px solid #444;border-radius:8px;background:#111;color:#fff;font-family:inherit;font-size:13px;resize:vertical;direction:rtl;outline:none;box-sizing:border-box";
 		popover.appendChild(ta);
 
 		const actions = document.createElement("div");
-		actions.style.cssText = "display:flex;gap:8px;justify-content:flex-end;margin-top:10px";
+		actions.className = "bv-comment-actions";
 
 		const saveBtn = document.createElement("button");
+		saveBtn.className = "bv-comment-save";
 		saveBtn.textContent = "✓ ذخیره";
-		saveBtn.style.cssText = "background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:13px;font-weight:600";
-		saveBtn.onclick = async (e) => {
+		saveBtn.addEventListener("click", (e) => {
 			e.preventDefault(); e.stopPropagation();
 			const commentText = ta.value.trim();
 			if (!commentText) { new Notice("❌ کامنت خالی"); return; }
-			await this.saveComment(selectedText, commentText, selectedColor, sourcePath, this.lastSelectedOccurrence, this.lastSelectedParaHash);
-			this.closePopover();
-			new Notice("✅ کامنت ذخیره شد");
-			onUpdate();
-		};
+			void this.saveComment(selectedText, commentText, selectedColor, sourcePath, this.lastSelectedOccurrence, this.lastSelectedParaHash).then(() => {
+				this.closePopover();
+				new Notice("✅ کامنت ذخیره شد");
+				onUpdate();
+			});
+		});
 
 		const cancelBtn = document.createElement("button");
+		cancelBtn.className = "bv-comment-cancel";
 		cancelBtn.textContent = "✕ لغو";
-		cancelBtn.style.cssText = "background:rgba(255,255,255,0.1);color:#ddd;border:1px solid #444;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:13px";
-		cancelBtn.onclick = (e) => { e.preventDefault(); e.stopPropagation(); this.closePopover(); };
+		cancelBtn.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); this.closePopover(); });
 
 		actions.appendChild(saveBtn);
 		actions.appendChild(cancelBtn);
@@ -613,7 +569,7 @@ export class CommentManager {
 			.replace(/[\u200b-\u200f\u2028-\u202f\u2060\ufeff]/g, "")
 			.replace(/\u200c/g, "")
 			.replace(/[*_~`#>|]/g, "")
-			.replace(/[.،؛:؟!«»"'()\[\]{}\-ـ,;?!]/g, "")
+			.replace(/[.،؛:؟!«»"'()[]{}\-ـ,;?!]/g, "")
 			.replace(ARABIC_DIACRITICS, "")
 			.replace(/\s+/g, "")
 			.replace(/[ةۀ]/g, "ه")
@@ -636,7 +592,7 @@ export class CommentManager {
 		const file = this.app.vault.getAbstractFileByPath(sourcePath);
 		if (!(file instanceof TFile)) return;
 
-		this.app.vault.read(file).then((raw) => {
+		void this.app.vault.read(file).then((raw) => {
 			const fmMatch = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n/);
 			if (!fmMatch) return;
 			const comments = this.parseComments(fmMatch[1]);
@@ -647,24 +603,13 @@ export class CommentManager {
 
 			const popover = document.createElement("div");
 			popover.className = "bv-comment-popover";
-			popover.style.cssText = `
-				position: fixed;
-				left: ${Math.max(10, Math.min(mark.getBoundingClientRect().left, window.innerWidth - 400))}px;
-				top: ${Math.min(mark.getBoundingClientRect().bottom + 10, window.innerHeight - 300)}px;
-				z-index: 10001;
-				background: #1e1e1e;
-				color: #fff;
-				border: 1px solid #444;
-				border-radius: 12px;
-				padding: 14px;
-				box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-				min-width: 300px;
-				max-width: 380px;
-				direction: rtl;
-			`;
+			popover.setCssProps({
+				"--bv-popover-left": `${Math.max(10, Math.min(mark.getBoundingClientRect().left, window.innerWidth - 400))}px`,
+				"--bv-popover-top": `${Math.min(mark.getBoundingClientRect().bottom + 10, window.innerHeight - 300)}px`,
+			});
 
 			const colorRow = document.createElement("div");
-			colorRow.style.cssText = "display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;";
+			colorRow.className = "bv-color-row";
 			colorRow.appendChild(document.createTextNode("🎨 "));
 
 			const colorPalette = ["#fbbf24", "#f472b6", "#a78bfa", "#60a5fa", "#34d399", "#f87171", "#fb923c", "#22d3ee"];
@@ -673,28 +618,25 @@ export class CommentManager {
 			const updateSwatchStyles = () => {
 				swatches.forEach((sw, idx) => {
 					const isActive = colorPalette[idx] === selectedColor;
-					sw.style.transform = isActive ? "scale(1.2)" : "scale(1)";
-					sw.style.borderColor = isActive ? "#fff" : "transparent";
+					sw.toggleClass("is-active", isActive);
 				});
 			};
 
 			colorPalette.forEach((color) => {
 				const sw = document.createElement("button");
 				sw.type = "button";
-				sw.style.cssText = `
-					width: 26px; height: 26px; border-radius: 50%;
-					background: ${color}; border: 3px solid transparent;
-					cursor: pointer; padding: 0; transition: all 0.15s;
-				`;
-				sw.addEventListener("click", async (e) => {
+				sw.className = "bv-color-swatch";
+				sw.setCssProps({ "--bv-swatch-color": color });
+				sw.addEventListener("click", (e) => {
 					e.preventDefault(); e.stopPropagation();
 					selectedColor = color; updateSwatchStyles();
 					const allMarks = document.querySelectorAll(`.bv-comment-mark[data-comment-id="${commentId}"]`);
 					allMarks.forEach((m) => {
-						(m as HTMLElement).style.setProperty("background-color", this.hexToRgba(color, 0.35), "important");
+						(m as HTMLElement).setCssProps({ "--bv-comment-bg": this.hexToRgba(color, 0.35) });
 					});
-					await this.updateCommentColor(file, commentId, color);
-					new Notice("🎨 رنگ تغییر کرد");
+					void this.updateCommentColor(file, commentId, color).then(() => {
+						new Notice("🎨 رنگ تغییر کرد");
+					});
 				});
 				swatches.push(sw);
 				colorRow.appendChild(sw);
@@ -702,20 +644,20 @@ export class CommentManager {
 			updateSwatchStyles();
 			popover.appendChild(colorRow);
 
-			// 🔑 متن کامنت (قابل ویرایش)
 			const text = document.createElement("div");
+			text.className = "bv-comment-view-text";
 			text.textContent = commentText;
-			text.style.cssText = `padding: 10px 12px; background: rgba(0,0,0,0.3); border-radius: 8px; margin-bottom: 12px; font-size: 13px; line-height: 1.6; white-space: pre-wrap; color: #ddd; border-right: 3px solid ${currentColor}; max-height: 150px; overflow: auto; min-height: 50px; cursor: text;`;
+			text.setCssProps({ "--bv-preview-border": currentColor });
 			popover.appendChild(text);
 
-			// 🔑 کلیک روی متن → تبدیل به textarea
-			text.addEventListener("click", (e) => {
+			text.addEventListener("click", () => {
 				if (text.querySelector("textarea")) return;
 				const ta = document.createElement("textarea");
+				ta.className = "bv-comment-input";
 				ta.value = commentText;
 				ta.rows = 3;
 				ta.setAttribute("dir", "rtl");
-				ta.style.cssText = `width:100%;padding:8px;border:1px solid ${currentColor};border-radius:6px;background:#2a2a2a;color:#fff;font-family:inherit;font-size:13px;line-height:1.6;resize:vertical;direction:rtl;outline:none;box-sizing:border-box;`;
+				ta.setCssProps({ "--bv-preview-border": currentColor });
 				text.innerHTML = "";
 				text.appendChild(ta);
 				ta.focus();
@@ -738,34 +680,35 @@ export class CommentManager {
 				};
 
 				ta.addEventListener("keydown", (ev) => {
-					if (ev.key === "Enter" && (ev.metaKey || ev.ctrlKey)) { ev.preventDefault(); saveEdit(); }
+					if (ev.key === "Enter" && (ev.metaKey || ev.ctrlKey)) { ev.preventDefault(); void saveEdit(); }
 					else if (ev.key === "Escape") { ev.preventDefault(); cancelEdit(); }
 				});
 				ta.addEventListener("blur", () => {
-					setTimeout(() => {
-						if (text.querySelector("textarea")) saveEdit();
+					window.setTimeout(() => {
+						if (text.querySelector("textarea")) void saveEdit();
 					}, 150);
 				});
 			});
 
 			const actions = document.createElement("div");
-			actions.style.cssText = "display:flex;gap:8px;justify-content:flex-end";
+			actions.className = "bv-comment-actions";
 
 			const deleteBtn = document.createElement("button");
+			deleteBtn.className = "bv-comment-delete";
 			deleteBtn.textContent = "🗑 حذف";
-			deleteBtn.style.cssText = "background:transparent;color:#ef4444;border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:6px 12px;cursor:pointer;font-size:12px";
-			deleteBtn.onclick = async (e) => {
+			deleteBtn.addEventListener("click", (e) => {
 				e.preventDefault(); e.stopPropagation();
-				await this.deleteComment(file, commentId);
-				this.closePopover();
-				new Notice("🗑 کامنت حذف شد");
-				onUpdate();
-			};
+				void this.deleteComment(file, commentId).then(() => {
+					this.closePopover();
+					new Notice("🗑 کامنت حذف شد");
+					onUpdate();
+				});
+			});
 
 			const closeBtn = document.createElement("button");
+			closeBtn.className = "bv-comment-close";
 			closeBtn.textContent = "✕ بستن";
-			closeBtn.style.cssText = "background:rgba(255,255,255,0.1);color:#ddd;border:1px solid #444;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:12px";
-			closeBtn.onclick = () => this.closePopover();
+			closeBtn.addEventListener("click", () => this.closePopover());
 
 			actions.appendChild(deleteBtn);
 			actions.appendChild(closeBtn);

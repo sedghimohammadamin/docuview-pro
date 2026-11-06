@@ -3,6 +3,14 @@ import JSZip from "jszip";
 
 const PAGE_MARKER = "XQZPAGEBREAKZQX";
 
+interface MammothResult {
+	value: string;
+}
+
+interface MammothModule {
+	convertToMarkdown: (opts: { arrayBuffer: ArrayBuffer }) => Promise<MammothResult>;
+}
+
 export async function wordToPages(
 	buffer: ArrayBuffer,
 	title: string
@@ -29,7 +37,8 @@ export async function wordToPages(
 	zip.file("word/document.xml", xml);
 	const newBuf = await zip.generateAsync({ type: "arraybuffer" });
 
-	const result = await (mammoth as any).convertToMarkdown({
+	const mammothMod = mammoth as unknown as MammothModule;
+	const result = await mammothMod.convertToMarkdown({
 		arrayBuffer: newBuf,
 	});
 	let md: string = result.value || "";
@@ -47,7 +56,6 @@ export async function wordToPages(
 	out.push("");
 
 	let isFirstPage = true;
-	let seenH1 = false;
 
 	for (let i = 0; i < chunks.length; i++) {
 		let text = chunks[i].trim();
@@ -64,7 +72,6 @@ export async function wordToPages(
 			out.push(`# ${h1Match[1].trim()}`);
 			out.push("");
 			text = text.replace(/^#\s+.+$/m, "").trim();
-			seenH1 = true;
 		}
 
 		text = text.replace(
