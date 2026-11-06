@@ -2,172 +2,99 @@
 
 <div dir="rtl">
 
-## 📖 نماینده‌ی ورد
+## 📖 نمایش صفحه‌بندی‌شده یادداشت‌ها
 
-نمایش یادداشت‌ها به شکل کتاب صفحه‌بندی‌شده با کارت‌های صفحه، پاورقی، کامنت و ایمپورت از Word.
+یادداشت‌های Obsidian را به شکل کتاب صفحه‌بندی‌شده نمایش می‌دهد — با کارت‌های صفحه، پاورقی، کامنت رنگی، هایلایت و ایمپورت از Word.
 
 ## ✨ امکانات
 
-- **نمایش صفحه‌ای** — هر یادداشت با `---` به کارت‌های صفحه تقسیم می‌شه
+- **نمایش صفحه‌ای** — هر یادداشت با `---` به کارت‌های صفحه تقسیم می‌شود
 - **چهار تم** — سفید، شیری، کرمی، سیاه
-- **کامنت** — روی هر متن کامنت رنگی بذار، با tooltip و ویرایش
-- **ایمپورت Word** — فایل `.docx` رو مستقیم به یادداشت تبدیل کن
-- **لینک به صفحه** — `[[file#58]]` باز می‌کنه و اسکرول می‌کنه به صفحه ۵۸ با هایلایت
-- **ویرایش پاورقی** — پاورقی‌ها جدا از متن اصلی قابل ویرایشن
-- **ویرایش صفحه** — کل صفحه رو ویرایش کن، پاورقی‌ها دست‌نخورده می‌مونن
-- **بک‌لینک** — فایل‌هایی که به این صفحه لینک دارن، ته کارت نمایش داده می‌شن
+- **کامنت** — روی هر متن کامنت رنگی بگذار، با tooltip و ویرایش
+- **ایمپورت Word** — فایل `.docx` را مستقیم به یادداشت تبدیل کن
+- **لینک به صفحه** — `[[file#58]]` باز می‌کند و اسکرول می‌کند به صفحه ۵۸ با هایلایت
+- **ویرایش پاورقی** — پاورقی‌ها جدا از متن اصلی قابل ویرایش‌اند
+- **ویرایش صفحه** — کل صفحه را ویرایش کن، پاورقی‌ها دست‌نخورده می‌مانند
+- **بک‌لینک** — فایل‌هایی که به این صفحه لینک دارند، ته کارت نمایش داده می‌شوند
+- **هایلایت متن** — راست‌کلیک روی پاراگراف برای هایلایت
 
 ## 🚀 استفاده
 
-### فعال‌سازی روی یک یادداشت
+۱. یک یادداشت با frontmatter زیر بساز:
 
-به frontmatter یادداشت اضافه کن:
+    ---
+    book-view: true
+    ---
 
-```yaml
----
-book-view: true
----
-بعد به Reading View برو. یادداشت به کارت‌های صفحه تبدیل می‌شه.
+۲. صفحات را با `---` از هم جدا کن:
 
-ساختار یادداشت
+    ---
+    book-view: true
+    ---
 
-markdown
----
-book-view: true
-start-page: 58
-start-page-old: 58
----
+    # عنوان درس
 
-# درس چهارم
+    (صفحه ۱)
 
----
+    متن صفحه اول...
 
-**(صفحه ۵۸)**
+    ---
 
-محتوای صفحه ۵۸...
+    (صفحه ۲)
 
----
+    متن صفحه دوم...
 
-**(صفحه ۵۹)**
+۳. یادداشت را در حالت Preview باز کن — خودکار به شکل کتاب نمایش داده می‌شود.
 
-محتوای صفحه ۵۹...
-start-page — شماره‌ی صفحه‌ی اول (برای شماره‌گذاری خودکار وقتی (صفحه X) نیست)
-start-page-old — برای بازمحاسبه‌ی لینک‌های صفحه بعد از تغییر start-page
-لینک به یک صفحه
+## 📄 ایمپورت از Word
 
-با [[file#58]] فایل باز می‌شه روی صفحه ۵۸.
+۱. Settings → DocuView Pro → ایمپورت از Word
+۲. فایل `.docx` را انتخاب کن
+۳. یادداشت جدید با صفحه‌بندی خودکار ساخته می‌شود
 
-اگه فایل از قبل توی split بازه → اسکرول و هایلایت
-اگه نه → توی split جدید باز می‌شه
-ایمپورت از Word
+## ⌨️ میان‌برها
 
-Settings → DocuView Pro
-روی Import from Word کلیک کن
-یه فایل .docx انتخاب کن
-یادداشت جدید با book-view: true و جداکننده‌های صفحه ساخته می‌شه
-⚙️ تنظیمات
+- **راست‌کلیک** روی پاراگراف → هایلایت
+- **Cmd/Ctrl + Enter** در ویرایش → ذخیره
+- **Esc** در ویرایش → لغو
 
-تم — سفید / شیری / کرمی / سیاه
-گردی گوشه‌ها — گردی کارت‌ها
-شدت سایه — سایه‌ی کارت‌ها
-عرض / ارتفاع / padding / فاصله‌ی کارت‌ها
-فونت متن / اندازه / ارتفاع خط / فاصله‌ی پاراگراف / ترازبندی
-فونت هدر / اندازه
-رنگ‌های پاورقی — رنگ متن، پس‌زمینه‌ی هایلایت، متن هایلایت
-شماره‌گذاری صفحه — نمایش/مخفی عنوان درس، نمایش/مخفی شماره صفحه، شروع شماره
-📋 پیش‌نیازها
+## ⚙️ تنظیمات
 
-فقط دسکتاپ (برای ایمپورت Word از Node fs استفاده می‌کنه)
-بدون وابستگی خارجی
-📄 لایسنس
+| تنظیم | توضیح |
+|--------|-------|
+| تم رنگ | سفید، شیری، کرمی، سیاه |
+| عرض کارت | عرض کارت صفحه (px) |
+| فونت متن | فونت و اندازه متن صفحه |
+| فونت هدر | فونت و اندازه هدر |
+| رنگ پاورقی | رنگ متن و هایلایت پاورقی |
+| شروع شماره صفحه | اگر شماره‌ها با Word نمی‌خواند |
+| نمایش عنوان درس | نمایش H1 بالای هر صفحه |
+| نمایش شماره صفحه | نمایش شماره در هدر |
 
-MIT
+## 🛠 نصب
 
-👤 نویسنده
+### از فروشگاه Obsidian
 
-محمدامین صدقی (Mohammad Amin Sedghi)
+Settings → Community Plugins → Browse → جستجو: **DocuView Pro**
 
-</div>
-English
+### دستی
 
-Display your notes as a paginated book with page cards, footnotes, comments, and Word import.
+۱. از [Releases](https://github.com/sedghimohammadamin/docuview-pro/releases) دانلود کن
+۲. سه فایل `main.js`، `manifest.json`، `styles.css` را در `.obsidian/plugins/docuview-pro/` بگذار
+۳. Obsidian را ری‌استارت کن
+۴. Settings → Community Plugins → DocuView Pro → Enable
 
-Features
+### BRAT
 
-Page-based rendering — Splits a note into visual page cards using --- as page separators
-Four themes — White, milky, cream, and black
-Comments — Select any text and add a colored comment with tooltip and inline editing
-Word import — Convert .docx files into DocuView Pro notes automatically
-Page links — Click [[file#58]] to open the file at page 58 with smooth scroll and highlight
-Footnote editing — Edit footnotes independently from the main text
-Page editing — Edit whole pages while keeping footnotes intact
-Backlinks — See which files link to the current page at the bottom of each card
-Usage
+۱. BRAT نصب کن
+۲. Add Beta Plugin → `sedghimohammadamin/docuview-pro`
 
-Enable DocuView Pro on a note
+## 📝 مجوز
 
-Add the following frontmatter to any note:
+MIT — [LICENSE](LICENSE)
 
-yaml
----
-book-view: true
----
-Then switch to Reading View. The note will render as a series of page cards.
-
-Structure your note
-
-markdown
----
-book-view: true
-start-page: 58
-start-page-old: 58
----
-
-# Lesson Four
-
----
-
-**(صفحه ۵۸)**
-
-Content of page 58...
-
----
-
-**(صفحه ۵۹)**
-
-Content of page 59...
-start-page — The page number of the first page (used for auto-numbering when (صفحه X) is not present)
-start-page-old — Used when recalculating page links after changing start-page
-Link to a specific page
-
-Use the syntax [[file#58]] to open file at page 58.
-
-If the file is already open in a split, it scrolls to that page and highlights the text.
-If not, it opens in a new split.
-Import from Word
-
-Open Settings → DocuView Pro
-Click Import from Word
-Select a .docx file
-A new note is created with book-view: true and page separators
-Settings
-
-Theme — white / milky / cream / black
-Border radius — card corner roundness
-Shadow — card shadow intensity
-Page width / height / padding / gap
-Body font / size / line height / paragraph spacing / text align
-Header font / size
-Footnote colors — text color, highlight background, highlight text
-Page numbering — show/hide lesson title, show/hide page number, start page
-Requirements
-
-Desktop only (uses Node fs for Word parsing)
-No external dependencies
-License
-
-MIT
-
-Author
+## 👤 نویسنده
 
 Mohammad Amin Sedghi
+
+</div>
