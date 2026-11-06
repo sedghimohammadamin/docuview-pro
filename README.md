@@ -1,4 +1,4 @@
-# Word Viewer
+# DocuView Pro
 
 <div dir="rtl">
 
@@ -61,7 +61,7 @@ start-page-old — برای بازمحاسبه‌ی لینک‌های صفحه �
 اگه نه → توی split جدید باز می‌شه
 ایمپورت از Word
 
-Settings → Word Viewer
+Settings → DocuView Pro
 روی Import from Word کلیک کن
 یه فایل .docx انتخاب کن
 یادداشت جدید با book-view: true و جداکننده‌های صفحه ساخته می‌شه
@@ -97,14 +97,14 @@ Features
 Page-based rendering — Splits a note into visual page cards using --- as page separators
 Four themes — White, milky, cream, and black
 Comments — Select any text and add a colored comment with tooltip and inline editing
-Word import — Convert .docx files into Word Viewer notes automatically
+Word import — Convert .docx files into DocuView Pro notes automatically
 Page links — Click [[file#58]] to open the file at page 58 with smooth scroll and highlight
 Footnote editing — Edit footnotes independently from the main text
 Page editing — Edit whole pages while keeping footnotes intact
 Backlinks — See which files link to the current page at the bottom of each card
 Usage
 
-Enable Word Viewer on a note
+Enable DocuView Pro on a note
 
 Add the following frontmatter to any note:
 
@@ -146,7 +146,7 @@ If the file is already open in a split, it scrolls to that page and highlights t
 If not, it opens in a new split.
 Import from Word
 
-Open Settings → Word Viewer
+Open Settings → DocuView Pro
 Click Import from Word
 Select a .docx file
 A new note is created with book-view: true and page separators
