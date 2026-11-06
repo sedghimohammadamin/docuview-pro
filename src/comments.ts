@@ -569,7 +569,7 @@ export class CommentManager {
 			.replace(/[\u200b-\u200f\u2028-\u202f\u2060\ufeff]/g, "")
 			.replace(/\u200c/g, "")
 			.replace(/[*_~`#>|]/g, "")
-			.replace(/[.،؛:؟!«»"'()[]{}\-ـ,;?!]/g, "")
+			.replace(/[.،؛:؟!«»"'()[]{}-ـ,;?!]/g, "")
 			.replace(ARABIC_DIACRITICS, "")
 			.replace(/\s+/g, "")
 			.replace(/[ةۀ]/g, "ه")

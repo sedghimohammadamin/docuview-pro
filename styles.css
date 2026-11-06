@@ -1428,4 +1428,104 @@ textarea.bv-fn-edit {
 	font-size: var(--bv-fn-size, 14px) !important;
 	line-height: var(--bv-fn-line, 1.7) !important;
 }
-[محتوای بالا]
+
+/* ═══════════════════════════════════════════
+   جایگزین setCssProps (برای پورتال Obsidian)
+   ═══════════════════════════════════════════ */
+
+.bv-btn-hover {
+	background: var(--background-modifier-hover);
+	border-color: var(--interactive-accent);
+}
+
+.bv-btn-normal {
+	background: var(--background-secondary);
+	border-color: var(--background-modifier-border);
+}
+
+.bv-cv-visible {
+	content-visibility: visible;
+}
+
+.bv-display-visible {
+	display: block;
+}
+
+.bv-display-none {
+	display: none;
+}
+
+.bv-editbtn-hover {
+	opacity: 1;
+	background: var(--background-modifier-hover);
+	border-color: var(--interactive-accent);
+}
+
+.bv-editbtn-normal {
+	opacity: 0.7;
+	background: transparent;
+	border-color: var(--background-modifier-border);
+}
+
+.bv-edit-textarea {
+	--bv-edit-bg: #ffffff;
+	--bv-edit-text: #1a1a1a;
+	--bv-edit-caret: #7c3aed;
+	--bv-edit-border: #7c3aed;
+	width: 100%;
+	min-height: 200px;
+}
+
+.bv-edit-textarea-dark {
+	--bv-edit-bg: #1e1e1e;
+	--bv-edit-text: #e0e0e0;
+	--bv-edit-caret: #a78bfa;
+	--bv-edit-border: #a78bfa;
+}
+
+.bv-edit-textarea-milky {
+	--bv-edit-bg: #faf9f6;
+	--bv-edit-text: #2a2a2a;
+}
+
+.bv-edit-textarea-cream {
+	--bv-edit-bg: #f5ecd9;
+	--bv-edit-text: #2b2118;
+}
+
+/* ═══════════════════════════════════════════
+   Footnote textarea (editFootnote)
+   ═══════════════════════════════════════════ */
+
+.bv-fn-edit-inline {
+	width: 100%;
+	min-height: 60px;
+	padding: 6px 8px;
+	border: none;
+	outline: none;
+	border-radius: 4px;
+	box-sizing: border-box;
+	resize: none;
+	direction: rtl;
+	text-align: justify;
+	background: var(--bv-edit-bg, #ffffff);
+	color: var(--bv-edit-text, #1a1a1a);
+	caret-color: var(--bv-edit-caret, #7c3aed);
+	box-shadow: inset 0 0 0 2px var(--bv-edit-border, #7c3aed);
+	font-family: var(--bv-fn-font, inherit);
+	font-size: var(--bv-fn-size, 14px);
+	line-height: var(--bv-fn-line, 1.7);
+}
+
+.bv-fn-edit-inline-dark {
+	--bv-edit-bg: #1e1e1e;
+	--bv-edit-text: #e0e0e0;
+	--bv-edit-caret: #a78bfa;
+	--bv-edit-border: #a78bfa;
+}
+
+/* backlinks box — theme variants */
+.bv-backlinks-theme-black { background: #262626; }
+.bv-backlinks-theme-cream { background: #ece0c6; }
+.bv-backlinks-theme-milky { background: #f2f0ea; }
+.bv-backlinks-theme-white { background: #f7f7f7; }

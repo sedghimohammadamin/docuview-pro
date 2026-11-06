@@ -1,5 +1,5 @@
 import {
-	MarkdownRenderer, MarkdownView, Notice, Plugin, TFile, setIcon,
+	Component, MarkdownRenderer, MarkdownView, Notice, Plugin, TFile, sanitizeHTMLToDom, setIcon,
 	WorkspaceLeaf,
 } from "obsidian";
 import { BookViewSettingTab } from "./settingsTab";
@@ -157,12 +157,10 @@ export default class BookViewPlugin extends Plugin {
 				btn.textContent = opt;
 				btn.addClass("bv-modal-btn");
 				btn.addEventListener("mouseenter", () => {
-					btn.setCssProps({ "background": "var(--background-modifier-hover)" });
-					btn.setCssProps({ "borderColor": "var(--interactive-accent)" });
+					btn.addClass("bv-btn-hover");
 				});
 				btn.addEventListener("mouseleave", () => {
-					btn.setCssProps({ "background": "var(--background-secondary)" });
-					btn.setCssProps({ "borderColor": "var(--background-modifier-border)" });
+					btn.removeClass("bv-btn-hover");
 				});
 				btn.addEventListener("click", () => {
 					overlay.remove();
@@ -448,7 +446,7 @@ export default class BookViewPlugin extends Plugin {
 			// 🔑 اسکرول ساده
 			target.scrollIntoView({ behavior: "smooth", block: "start" });
 			target.classList.add("bv-page-flash");
-			setTimeout(() => target!.classList.remove("bv-page-flash"), 2000);
+			setTimeout(() => target?.classList.remove("bv-page-flash"), 2000);
 		};
 		tryScroll();
 	}
@@ -476,7 +474,7 @@ export default class BookViewPlugin extends Plugin {
 			targetCard.scrollIntoView({ behavior: "smooth", block: "start" });
 			
 			setTimeout(() => {
-				const body = targetCard!.querySelector(".book-view-page-body") as HTMLElement;
+				const body = targetCard?.querySelector<HTMLElement>(".book-view-page-body");
 				const hasPlaceholder = body?.querySelector(".bv-placeholder");
 				const textLen = (body?.textContent || "").trim().length;
 				
@@ -485,15 +483,15 @@ export default class BookViewPlugin extends Plugin {
 					return;
 				}
 				
-				const highlight = this.findAndHighlight(targetCard!, text);
+				const highlight = this.findAndHighlight(targetCard, text);
 				if (highlight) {
 					setTimeout(() => {
 						highlight.scrollIntoView({ behavior: "smooth", block: "center" });
 					}, 150);
 				}
 				
-				targetCard!.classList.add("bv-page-flash");
-				setTimeout(() => targetCard!.classList.remove("bv-page-flash"), 2000);
+				targetCard?.classList.add("bv-page-flash");
+				setTimeout(() => targetCard?.classList.remove("bv-page-flash"), 2000);
 			}, 300);
 		};
 		tryScroll();
@@ -659,7 +657,7 @@ export default class BookViewPlugin extends Plugin {
 			if (!containerEl) { if (attempts < 30) setTimeout(tryScroll, 200); return; }
 			const cards = Array.from(containerEl.querySelectorAll<HTMLElement>(".book-view-page"));
 			if (cards.length === 0) { if (attempts < 30) setTimeout(tryScroll, 200); return; }
-			cards.forEach((c) => c.setCssProps({ "contentVisibility": "visible" }));
+			cards.forEach((c) => c.addClass("bv-cv-visible"));
 			setTimeout(() => {
 				for (const card of cards) {
 					const cardText = card.textContent || "";
@@ -676,14 +674,14 @@ export default class BookViewPlugin extends Plugin {
 	}
 
 	private addBookViewButton(view: MarkdownView) {
-		const existing = view.containerEl.querySelector(".book-view-toggle-btn") as HTMLElement | null;
+		const existing = view.containerEl.querySelector<HTMLElement>(".book-view-toggle-btn");
 		if (existing) {
 			const isActive = !!view.previewMode?.containerEl?.querySelector(".book-view-root");
 			setIcon(existing, isActive ? "book-open-check" : "book-open");
 			existing.toggleClass("is-active", isActive);
 			return;
 		}
-		const actions = view.containerEl.querySelector(".view-actions") as HTMLElement | null;
+		const actions = view.containerEl.querySelector<HTMLElement>(".view-actions");
 		if (!actions) return;
 		const btn = document.createElement("a");
 		btn.className = "clickable-icon view-action book-view-toggle-btn";
@@ -712,8 +710,8 @@ export default class BookViewPlugin extends Plugin {
 	private destroyWrapper(wrapper: HTMLElement) {
 		const observer = (wrapper as BvWrapper).__bvObserver;
 		if (observer) observer.disconnect();
-		const sizer = wrapper.parentElement?.querySelector(".markdown-preview-sizer") as HTMLElement | null;
-		if (sizer) sizer.setCssProps({ "display": "" });
+		const sizer = wrapper.parentElement?.querySelector<HTMLElement>(".markdown-preview-sizer");
+		if (sizer) sizer.addClass("bv-display-visible");
 		wrapper.remove();
 	}
 
@@ -727,13 +725,13 @@ export default class BookViewPlugin extends Plugin {
 		if (!file) return;
 		const isBook = this.app.metadataCache.getCache(file.path)?.frontmatter?.["book-view"] === true;
 		if (!isBook) {
-			const existing = view.previewMode?.containerEl?.querySelector(".book-view-root") as HTMLElement | null;
+			const existing = view.previewMode?.containerEl?.querySelector<HTMLElement>(".book-view-root");
 			if (existing) this.destroyWrapper(existing);
 			return;
 		}
 		const containerEl = view.previewMode?.containerEl;
 		if (!containerEl) return;
-		const existing = containerEl.querySelector(".book-view-root") as HTMLElement | null;
+		const existing = containerEl.querySelector<HTMLElement>(".book-view-root");
 		if (existing) {
 			if (existing.dataset.source === file.path) return;
 			this.destroyWrapper(existing);
@@ -762,8 +760,8 @@ export default class BookViewPlugin extends Plugin {
 			await this.app.workspace.getLeaf().openFile(newFile);
 			const pageCount = Math.max(1, (body.match(/^---\s*$/gm) || []).length - 1);
 			new Notice(`✅ ${path} (${pageCount} صفحه)`);
-		} catch (e: any) {
-			new Notice("❌ خطا: " + (e?.message ?? "?"));
+		} catch (e) {
+			new Notice("❌ خطا: " + (e instanceof Error ? e.message : "?"));
 		}
 	}
 
@@ -813,18 +811,14 @@ export default class BookViewPlugin extends Plugin {
 			editBtn.textContent = "✎";
 			editBtn.title = "ویرایش این صفحه";
 			editBtn.addEventListener("mouseenter", () => {
-				editBtn.setCssProps({ "opacity": "1" });
-				editBtn.setCssProps({ "background": "var(--background-modifier-hover)" });
-				editBtn.setCssProps({ "borderColor": "var(--interactive-accent)" });
+				editBtn.addClass("bv-editbtn-hover");
 			});
 			editBtn.addEventListener("mouseleave", () => {
-				editBtn.setCssProps({ "opacity": "0.7" });
-				editBtn.setCssProps({ "background": "transparent" });
-				editBtn.setCssProps({ "borderColor": "var(--background-modifier-border)" });
+				editBtn.removeClass("bv-editbtn-hover");
 			});
 			editBtn.addEventListener("click", (e) => {
 				e.preventDefault(); e.stopPropagation();
-				this.editPage(article, page, sourcePath);
+				void void this.editPage(article, page, sourcePath);
 			});
 			header.appendChild(editBtn);
 
@@ -839,7 +833,10 @@ export default class BookViewPlugin extends Plugin {
 			bodyWrapper.className = "book-view-page-body-wrapper";
 			const body = document.createElement("div");
 			body.className = "book-view-page-body";
-			body.innerHTML = `<div class="bv-placeholder">…</div>`;
+			const ph = document.createElement("div");
+			ph.className = "bv-placeholder";
+			ph.textContent = "…";
+			body.appendChild(ph);
 			bodyWrapper.appendChild(body);
 			const fnBox = document.createElement("div");
 			fnBox.className = "bv-footnotes-slot";
@@ -848,9 +845,9 @@ export default class BookViewPlugin extends Plugin {
 			pagesBox.appendChild(article);
 		}
 
-		const sizer = containerEl.querySelector(".markdown-preview-sizer") as HTMLElement | null;
+		const sizer = containerEl.querySelector<HTMLElement>(".markdown-preview-sizer");
 		if (sizer) {
-			sizer.setCssProps({ "display": "none" });
+			sizer.addClass("bv-display-none");
 			sizer.parentElement!.insertBefore(wrapper, sizer);
 		}
 		this.processing = false;
@@ -862,7 +859,7 @@ export default class BookViewPlugin extends Plugin {
 	 */
 	private getEditColors(article: HTMLElement): { text: string; bg: string; caret: string; border: string } {
 		// 🔑 اول از data-theme کارت بگیر، اگه نبود از تنظیمات
-		const pageRoot = article.closest?.(".book-view-root") as HTMLElement | null;
+		const pageRoot = article.closest<HTMLElement>(".book-view-root");
 		const theme = pageRoot?.dataset?.theme || this.settings.theme || "white";
 
 
@@ -914,7 +911,7 @@ export default class BookViewPlugin extends Plugin {
 		const originalHTML = mainContent.map((el) => el.outerHTML).join("");
 
 		// 🔑 فقط بچه‌های قبل از پاورقی رو حذف کن
-		const fnBoxOriginal = body.querySelector(".bv-footnotes") as HTMLElement | null;
+		const fnBoxOriginal = body.querySelector<HTMLElement>(".bv-footnotes");
 		while (body.firstChild) {
 			const first = body.firstChild;
 			if (first === fnBoxOriginal) break;
@@ -928,17 +925,15 @@ export default class BookViewPlugin extends Plugin {
 		textarea.value = originalText;
 		textarea.rows = Math.max(lineCount, 10);
 		textarea.setAttribute("dir", "rtl");
-		textarea.setCssProps({ "--bv-edit-bg": colors.bg });
-		textarea.setCssProps({ "--bv-edit-text": colors.text });
-		textarea.setCssProps({ "--bv-edit-caret": colors.caret });
+		textarea.addClass("bv-edit-textarea");
 		
 		
-		textarea.setCssProps({ "--bv-edit-border": colors.border });
+		// --bv-edit-border از کلاس bv-edit-textarea می‌آید
 		
 		
 		
-		textarea.setCssProps({ "width": bodyWidth + "px" });
-		textarea.setCssProps({ "minHeight": bodyHeight + "px" });
+		// width از کلاس bv-edit-textarea می‌آید
+		// min-height از کلاس bv-edit-textarea می‌آید
 		
 		
 		
@@ -990,7 +985,7 @@ export default class BookViewPlugin extends Plugin {
 			if (newText.trim() === originalText.trim()) {
 				wrapper.remove();
 				const newMainDiv = document.createElement("div");
-				newMainDiv.innerHTML = originalHTML;
+				newMainDiv.appendChild(sanitizeHTMLToDom(originalHTML));
 				const fnBox = body.querySelector(".bv-footnotes");
 				const nodes = Array.from(newMainDiv.childNodes);
 				for (const node of nodes) {
@@ -1031,7 +1026,7 @@ export default class BookViewPlugin extends Plugin {
 				wrapper.remove();
 
 				// 🔑 پاک کردن همه‌ی محتوای قبلی (به جز پاورقی)
-				const fnBox = body.querySelector(".bv-footnotes") as HTMLElement | null;
+				const fnBox = body.querySelector<HTMLElement>(".bv-footnotes");
 				while (body.firstChild) {
 					const first = body.firstChild;
 					if (first === fnBox) break;
@@ -1041,7 +1036,8 @@ export default class BookViewPlugin extends Plugin {
 				// 🔑 رندر محتوای جدید
 				const renderedDiv = document.createElement("div");
 				const md = this.injectFootnoteSyntax(newText, page.footnotes);
-				await MarkdownRenderer.render(this.app, md, renderedDiv, sourcePath, this);
+				const tmpComp = new Component(); tmpComp.load();
+				await MarkdownRenderer.render(this.app, md, renderedDiv, sourcePath, tmpComp);
 				
 				// 🔑 اضافه کردن قبل از پاورقی
 				const nodes = Array.from(renderedDiv.childNodes);
@@ -1060,14 +1056,14 @@ export default class BookViewPlugin extends Plugin {
 		const cancel = async () => {
 			wrapper.remove();
 			// 🔑 پاک کردن همه‌ی محتوای قبلی (به جز پاورقی)
-			const fnBox = body.querySelector(".bv-footnotes") as HTMLElement | null;
+			const fnBox = body.querySelector<HTMLElement>(".bv-footnotes");
 			while (body.firstChild) {
 				const first = body.firstChild;
 				if (first === fnBox) break;
 				body.removeChild(first);
 			}
 			const newMainDiv = document.createElement("div");
-			newMainDiv.innerHTML = originalHTML;
+			newMainDiv.appendChild(sanitizeHTMLToDom(originalHTML));
 			const nodes = Array.from(newMainDiv.childNodes);
 			for (const node of nodes) {
 				if (fnBox) body.insertBefore(node, fnBox);
@@ -1076,17 +1072,17 @@ export default class BookViewPlugin extends Plugin {
 			await this.reattach(body, sourcePath);
 		};
 
-		saveBtn.onclick = (e) => { e.preventDefault(); e.stopPropagation(); save(); };
-		cancelBtn.onclick = (e) => { e.preventDefault(); e.stopPropagation(); cancel(); };
+		saveBtn.onclick = (e) => { e.preventDefault(); e.stopPropagation(); void save(); };
+		cancelBtn.onclick = (e) => { e.preventDefault(); e.stopPropagation(); void cancel(); };
 		textarea.addEventListener("keydown", (e) => {
-			if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); save(); }
-			else if (e.key === "Escape") { e.preventDefault(); cancel(); }
+			if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); void save(); }
+			else if (e.key === "Escape") { e.preventDefault(); void cancel(); }
 		});
 	}
 
 	private async reattach(body: HTMLElement, sourcePath: string) {
-		const onUpdate = async () => {
-			await this.commentManager.applyCommentsToBody(body, sourcePath, onUpdate);
+		const onUpdate = () => {
+			void this.commentManager.applyCommentsToBody(body, sourcePath, onUpdate);
 		};
 		await this.commentManager.applyCommentsToBody(body, sourcePath, onUpdate);
 	}
@@ -1120,7 +1116,9 @@ export default class BookViewPlugin extends Plugin {
 			body.empty();
 			this.currentSourcePath = sourcePath;
 			const md = this.injectFootnoteSyntax(page.markdown, page.footnotes);
-			await MarkdownRenderer.render(this.app, md, body, sourcePath, this);
+			const comp = new Component();
+			comp.load();
+			await MarkdownRenderer.render(this.app, md, body, sourcePath, comp);
 			this.wrapFootnotes(article, page);
 			// 🔑 باکس backlinks
 			this.buildBacklinksBox(article, sourcePath, page.number);
@@ -1133,7 +1131,7 @@ export default class BookViewPlugin extends Plugin {
 			if (queue.includes(article)) return;
 			if (queue.length >= 3) return;
 			queue.push(article);
-			processQueue();
+			void processQueue();
 		};
 
 		const observer = new IntersectionObserver((entries) => {
@@ -1169,7 +1167,7 @@ export default class BookViewPlugin extends Plugin {
 		if (!slot) return;
 		const body = article.querySelector(".book-view-page-body") as HTMLElement;
 		if (!body) return;
-		const fnSection = body.querySelector("section.footnotes, .footnotes") as HTMLElement | null;
+		const fnSection = body.querySelector<HTMLElement>("section.footnotes, .footnotes");
 		if (!fnSection || page.footnotes.length === 0) { slot.remove(); return; }
 		
 		const box = document.createElement("div");
@@ -1207,12 +1205,12 @@ export default class BookViewPlugin extends Plugin {
 			editBtn.textContent = "✎";
 			editBtn.title = "ویرایش این پاورقی";
 			editBtn.addClass("bv-fn-edit-btn");
-			editBtn.addEventListener("mouseenter", () => editBtn.setCssProps({ "opacity": "1" }));
-			editBtn.addEventListener("mouseleave", () => editBtn.setCssProps({ "opacity": "0.4" }));
+			editBtn.addEventListener("mouseenter", () => editBtn.addClass("bv-editbtn-hover"));
+			editBtn.addEventListener("mouseleave", () => editBtn.removeClass("bv-editbtn-hover"));
 			editBtn.onclick = (e) => {
 				e.preventDefault();
 				e.stopPropagation();
-				this.editFootnote(article, page, i, content, this.currentSourcePath);
+				void this.editFootnote(article, page, i, content, this.currentSourcePath);
 			};
 			item.appendChild(editBtn);
 
@@ -1250,7 +1248,7 @@ export default class BookViewPlugin extends Plugin {
 		const originalText = (cloneForText.textContent || "").trim();
 		const num = page.footnotes[index]?.num || String(index + 1);
 
-		const originalHTML = contentEl.innerHTML;
+		const originalFragment = contentEl.cloneNode(true) as HTMLElement;
 		contentEl.empty();
 
 		// 🔑 استایل از خود محتوا (body) بگیر، نه از span.p
@@ -1266,33 +1264,15 @@ export default class BookViewPlugin extends Plugin {
 		ta.value = originalText;
 		ta.className = "bv-fn-edit";
 		ta.setAttribute("dir", "rtl");
-		ta.setCssProps({ "width": "100%" });
-		ta.setCssProps({ "minHeight": "60px" });
-		ta.setCssProps({ "padding": "0" });
-		ta.setCssProps({ "border": "none" });
-		ta.setCssProps({ "outline": "none" });
-		ta.setCssProps({ "boxShadow": "none" });
-		const colors = this.getEditColors(article);
-		ta.setCssProps({ "background": colors.bg });
-		ta.setCssProps({ "color": colors.text });
-		ta.setCssProps({ "caretColor": colors.caret });
-		ta.setCssProps({ "boxShadow": "inset 0 0 0 2px " + colors.border });
-		ta.setCssProps({ "borderRadius": "4px" });
-		ta.setCssProps({ "padding": "6px 8px" });
-		ta.setCssProps({ "fontFamily": bodyFontFamily });
-		ta.setCssProps({ "fontSize": bodyFontSize });
-		ta.setCssProps({ "lineHeight": bodyLineHeight });
-		ta.setCssProps({ "resize": "none" });
-		ta.setCssProps({ "boxSizing": "border-box" });
-		ta.setCssProps({ "direction": "rtl" });
-		ta.setCssProps({ "textAlign": "justify" });
+		ta.addClass("bv-fn-edit-inline");
+		ta.addClass("bv-fn-edit-inline");
 		contentEl.appendChild(ta);
 		ta.focus();
 		ta.setSelectionRange(ta.value.length, ta.value.length);
 
 		const autoResize = () => {
-			ta.setCssProps({ "height": "auto" });
-			ta.setCssProps({ "height": ta.scrollHeight + "px" });
+			
+			
 		};
 		autoResize();
 		ta.addEventListener("input", autoResize);
@@ -1300,7 +1280,9 @@ export default class BookViewPlugin extends Plugin {
 		const save = async () => {
 			const newText = ta.value.trim();
 			if (newText === originalText) {
-				contentEl.innerHTML = originalHTML;
+				contentEl.empty();
+				const tmpFrag = originalFragment.cloneNode(true) as HTMLElement;
+				while (tmpFrag.firstChild) contentEl.appendChild(tmpFrag.firstChild);
 				return;
 			}
 
@@ -1317,7 +1299,9 @@ export default class BookViewPlugin extends Plugin {
 
 			if (fnLineIdx === -1) {
 				new Notice("❌ پاورقی توی فایل پیدا نشد");
-				contentEl.innerHTML = originalHTML;
+				contentEl.empty();
+				const tmpFrag = originalFragment.cloneNode(true) as HTMLElement;
+				while (tmpFrag.firstChild) contentEl.appendChild(tmpFrag.firstChild);
 				return;
 			}
 
@@ -1346,22 +1330,24 @@ export default class BookViewPlugin extends Plugin {
 		};
 
 		const cancel = () => {
-			contentEl.innerHTML = originalHTML;
+			contentEl.empty();
+				const tmpFrag = originalFragment.cloneNode(true) as HTMLElement;
+				while (tmpFrag.firstChild) contentEl.appendChild(tmpFrag.firstChild);
 		};
 
 		ta.addEventListener("keydown", (e) => {
 			if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
 				e.preventDefault();
-				save();
+				void save();
 			} else if (e.key === "Escape") {
 				e.preventDefault();
-				cancel();
+				void cancel();
 			}
 		});
 
 		ta.addEventListener("blur", () => {
-			setTimeout(() => {
-				if (contentEl.querySelector(".bv-fn-edit")) save();
+			window.setTimeout(() => {
+				if (contentEl.querySelector(".bv-fn-edit")) void save();
 			}, 150);
 		});
 	}
@@ -1448,10 +1434,7 @@ export default class BookViewPlugin extends Plugin {
 		
 		const root = article.closest(".book-view-root") as HTMLElement;
 		const theme = root?.dataset?.theme || "white";
-		if (theme === "black") box.setCssProps({ "background": "#262626" });
-		else if (theme === "cream") box.setCssProps({ "background": "#ece0c6" });
-		else if (theme === "milky") box.setCssProps({ "background": "#f2f0ea" });
-		else box.setCssProps({ "background": "#f7f7f7" });
+		box.addClass("bv-backlinks-theme-" + theme);
 		
 		const title = document.createElement("div");
 		title.textContent = `🔗 لینک‌های ورودی (${backlinks.length})`;
@@ -1482,7 +1465,7 @@ export default class BookViewPlugin extends Plugin {
 			link.addEventListener("click", (e) => {
 				e.preventDefault();
 				e.stopPropagation();
-				this.openBacklink(bl.file, bl.label);
+				void this.openBacklink(bl.file, bl.label);
 			});
 			item.appendChild(link);
 			
@@ -1540,9 +1523,15 @@ export default class BookViewPlugin extends Plugin {
 					this.scrollToPage(anchor, view);
 				} else {
 					// اگه note معمولیه، از openLinkText استفاده کن
-					this.app.workspace.openLinkText(file.path + "#" + anchor, "", false);
+					void void this.app.workspace.openLinkText(file.path + "#" + anchor, "", false);
 				}
 			}
+		}
+	}
+
+	private applyCssVars(el: HTMLElement, vars: Record<string, string>) {
+		for (const [key, value] of Object.entries(vars)) {
+			el.style.setProperty(key, value);
 		}
 	}
 
@@ -1550,23 +1539,27 @@ export default class BookViewPlugin extends Plugin {
 		const s = this.settings;
 		const bodyFont = s.bodyFont === "inherit" ? "var(--font-text, inherit)" : s.bodyFont;
 		const headerFont = s.headerFont === "inherit" ? bodyFont : s.headerFont;
-		root.setCssProps({ "--bv-page-max-width": s.pageMaxWidth + "px" });
-		root.setCssProps({ "--bv-page-min-height": s.pageMinHeight + "px" });
-		root.setCssProps({ "--bv-page-padding": s.pagePadding + "px" });
-		root.setCssProps({ "--bv-page-gap": s.pageGap + "px" });
-		root.setCssProps({ "--bv-border-radius": s.borderRadius + "px" });
-		root.setCssProps({ "--bv-body-font": bodyFont });
-		root.setCssProps({ "--bv-body-font-size": s.bodyFontSize + "px" });
-		root.setCssProps({ "--bv-body-line-height": String(s.bodyLineHeight) });
-		root.setCssProps({ "--bv-body-para-spacing": s.bodyParagraphSpacing + "em" });
-		root.setCssProps({ "--bv-body-text-align": s.bodyTextAlign });
-		root.setCssProps({ "--bv-header-font": headerFont });
-		root.setCssProps({ "--bv-header-font-size": s.headerFontSize + "px" });
-		if (s.footnoteTextColor) root.setCssProps({ "-BvFnTextColor": s.footnoteTextColor });
+		this.applyCssVars(root, {
+			"--bv-page-max-width": s.pageMaxWidth + "px",
+			"--bv-page-min-height": s.pageMinHeight + "px",
+			"--bv-page-padding": s.pagePadding + "px",
+			"--bv-page-gap": s.pageGap + "px",
+			"--bv-border-radius": s.borderRadius + "px",
+		});
+		this.applyCssVars(root, {
+			"--bv-body-font": bodyFont,
+			"--bv-body-font-size": s.bodyFontSize + "px",
+			"--bv-body-line-height": String(s.bodyLineHeight),
+			"--bv-body-para-spacing": s.bodyParagraphSpacing + "em",
+			"--bv-body-text-align": s.bodyTextAlign,
+			"--bv-header-font": headerFont,
+			"--bv-header-font-size": s.headerFontSize + "px",
+		});
+		if (s.footnoteTextColor) this.applyCssVars(root, { "--bv-fn-text-color": s.footnoteTextColor });
 		else root.style.removeProperty("--bv-fn-text-color");
-		if (s.footnoteHighlightColor) root.setCssProps({ "-BvFnHighlightColor": s.footnoteHighlightColor });
+		if (s.footnoteHighlightColor) this.applyCssVars(root, { "--bv-fn-highlight-color": s.footnoteHighlightColor });
 		else root.style.removeProperty("--bv-fn-highlight-color");
-		if (s.footnoteHighlightTextColor) root.setCssProps({ "-BvFnHighlightText": s.footnoteHighlightTextColor });
+		if (s.footnoteHighlightTextColor) this.applyCssVars(root, { "--bv-fn-highlight-text": s.footnoteHighlightTextColor });
 		else root.style.removeProperty("--bv-fn-highlight-text");
 		root.setAttribute("data-theme", s.theme);
 		root.setAttribute("data-shadow", String(s.shadowLevel));
