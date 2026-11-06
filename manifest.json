@@ -1,7 +1,7 @@
 {
-	"id": "docuview-pro",
-	"name": "DocuView Pro",
-	"version": "1.0.3",
+	"id": "word-reader-pro",
+	"name": "Word Reader Pro",
+	"version": "1.0.4",
 	"minAppVersion": "1.5.0",
 	"description": "Display paginated notes as book pages with comments, highlights, Word import, and page-based links.",
 	"author": "Mohammad Amin Sedghi",
