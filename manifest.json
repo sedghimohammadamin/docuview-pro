@@ -1,0 +1,9 @@
+{
+	"id": "book-view",
+	"name": "Book View",
+	"version": "1.0.0",
+	"minAppVersion": "1.5.0",
+	"description": "Display paginated notes as book pages with comments, highlights, Word import, and page-based links.",
+	"author": "Mohammad Amin Sedghi",
+	"isDesktopOnly": false
+}
